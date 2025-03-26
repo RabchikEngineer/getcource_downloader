@@ -17,55 +17,12 @@ from rich.text import Text
 links_dir='links/'
 temp_dir='temp/'
 videos_dir='videos/'
+downloaded_mark="downloaded"
 
 
 # filename='480_12_1'
 # log_format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {message}'
 log_format = '[green]{time:HH:mm:ss}[/green] | [level]{level: <8}[/level] |.................... {message}'
-
-
-
-
-
-def extract_links(filename):
-    with open(os.path.join(links_dir+filename)) as f:
-        links=list(filter(lambda x: x.startswith('http'), f.readlines()))
-    return links
-
-
-def download_file(link, filename):
-    status_code=0
-
-    if path_exists(filename):
-        logger.trace(f"{filename} already exists")
-        return
-
-    with active_lock:
-        active_downloads.update({filename:time.time()})
-
-    while status_code != 200:
-        resp = requests.get(link)
-        status_code=resp.status_code
-
-    with open(filename, 'wb') as f:
-        f.write(resp.content)
-
-    # print(f"{filename} downloaded")
-    logger.trace(f"{filename} downloaded")
-
-    with active_lock:
-        del active_downloads[filename]
-
-
-
-def extract_filenames(links, filename):
-    for link in links:
-        yield os.path.join(temp_dir,filename,link[link.rfind('/') + 1:link.find('?')])
-
-
-def list_filenames(path):
-    return [f"file '{x}'" for x in sorted(filter(lambda x: x.endswith('bin'),os.listdir(path)),
-                                                     key=lambda x: int(x.split('.')[0]))]
 
 
 def create_dir(path):
@@ -79,13 +36,13 @@ def create_dir(path):
         sys.exit(1)
 
 
-def path_exists(path):
-    return pathlib.Path(path).exists()
+def list_filenames(path):
+    return [f"file '{x}'" for x in sorted(filter(lambda x: x.endswith('bin'),os.listdir(path)),
+                                                         key=lambda x: int(x.split('.')[0]))]
 
 
-def get_active_panel():
-    """Return a Panel showing current active downloads."""
-    with active_lock:
+def get_active_downloads_panel():
+    with active_downloads_lock:
         if active_downloads:
             content = "\n".join([f"{filename:20} --- "+
                  (lambda time_val: f"{int(time_val)}s" if time_val<10 else f"[red]{int(time_val)}s[/red]")
@@ -95,16 +52,23 @@ def get_active_panel():
     return Panel(content, title="Active Downloads", border_style="green")
 
 
+def path_exists(path):
+    return pathlib.Path(path).exists()
+
+
+
 def make_layout() -> Layout:
     """Create a layout with two columns: progress on the left, active downloads on the right."""
     layout = Layout()
     layout.split_row(
         Layout(ratio=2),
-        Layout(get_active_panel(), ratio=1)
+        Layout(get_active_downloads_panel(), ratio=1)
     )
     layout.children[0].split_column(
         Layout(Panel(progress, title=f"Downloading videos")),
-        Layout(renderable=Panel(title="Actions", renderable=Text(text="dd"*100,no_wrap=True, overflow="ellipsis")),ratio=2) # Text(no_wrap=True, overflow="ellipsis")
+        Layout(renderable=Panel(title="Actions",
+                                renderable=Text(text="dd"*100,no_wrap=True, overflow="ellipsis")),ratio=2)
+        # Text(no_wrap=True, overflow="ellipsis")
     )
     return layout
 
@@ -119,19 +83,18 @@ class LogString():
         while len(self.lines)>self.size:
             self.lines.pop(0)
         self.text="".join(self.lines)
-        # print(self.lines)
 
     def set_size(self, size):
         self.size=size
 
 
+def list_links_filenames():
+    return list(filter(lambda x: downloaded_mark not in x,os.listdir(links_dir)))
+
+
 def updater(once=False):
     while True:
-        layout.children[1].update(get_active_panel())
-        # text=layout.children[0].children[1].renderable.renderable
-        # print(log_string.text)
-
-        # Text().from_markup()
+        layout.children[1].update(get_active_downloads_panel())
 
         layout.children[0].children[1].renderable.renderable=(
             layout.children[0].children[1].renderable.renderable.from_markup(log_string.text,overflow="ignore"))
@@ -142,57 +105,101 @@ def updater(once=False):
         time.sleep(1/4)
 
 
-def download_video(filename):
+class VideoDownloader():
 
-    video_filename=os.path.join(videos_dir, filename+'.mp4')
-    if path_exists(video_filename):
-        logger.warning(f"{filename}.mp4 already exists")
-        return
-    # pathlib.Path(video_filename).unlink(missing_ok=True)
+    filename=""
 
+    def __init__(self,filename):
+        self.filename = filename
 
-    # links = extract_links(filename)[:50]
-    links = extract_links(filename)
-
-    task_id = progress.add_task(f"Downloading {filename}", total=len(links))
-    if len(progress.tasks)>progressbar_count:
-        progress.remove_task(progress.task_ids[0])
-
-    create_dir(os.path.join(temp_dir,filename))
+    def extract_links(self):
+        with open(os.path.join(links_dir+self.filename)) as f:
+            links=list(filter(lambda x: x.startswith('http'), f.readlines()))
+        return links
 
 
-    with futures.ThreadPoolExecutor(max_workers=20) as executor:
-        result=executor.map(download_file, links, extract_filenames(links, filename))
-        for _ in result:
-            pass
-            progress.advance(task_id,1)
+    def download_file(self, link, chunk_filename):
+        status_code=0
+
+        if path_exists(chunk_filename):
+            logger.trace(f"{chunk_filename} already exists")
+            return
+
+        with active_downloads_lock:
+            active_downloads.update({chunk_filename:time.time()})
+
+        try:
+            while status_code != 200:
+                resp = requests.get(link)
+                status_code=resp.status_code
+
+            with open(chunk_filename, 'wb') as f:
+                f.write(resp.content)
+
+            logger.trace(f"{chunk_filename} downloaded")
+
+        except requests.exceptions.ConnectionError:
+            self.download_file(link, chunk_filename)
+
+        finally:
+            with active_downloads_lock:
+                del active_downloads[chunk_filename]
 
 
-    with open(os.path.join(temp_dir, filename, "list.txt"), 'w') as f:
-        f.write('\n'.join(list_filenames(os.path.join(temp_dir, filename))))
+    def extract_chunk_paths(self,links):
+        for link in links:
+            yield os.path.join(temp_dir,self.filename,link[link.rfind('/') + 1:link.find('?')])
 
-    # subprocess.run(['ffmpeg', '-f','concat','-i',os.path.join(temp_dir, filename, "list.txt"),'-c','copy',
-    #                 video_filename],capture_output=True, input="y".encode('utf-8'))
 
-    try:
-        # proc=subprocess.Popen(['ffmpeg', '-f','concat','-i',os.path.join(temp_dir, filename, "list.txt"),'-c','copy',
-        #                 video_filename],stdin=subprocess.PIPE,stderr=subprocess.PIPE)
-        proc=subprocess.Popen(['ffmpeg', '-f','concat','-safe','0','-i',os.path.join(temp_dir, filename, "list.txt"),'-c:v','copy','-c:a','copy',
-                               '-movflags','+faststart',video_filename],stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+    def download_video(self):
 
-    except subprocess.SubprocessError:
-        logger.error('Conversion failed')
-        sys.exit(1)
+        filename=self.filename
 
-    logger.info('Conversion started')
-    proc.stdin.write("y".encode('utf-8'))
-    proc.wait()
-    result=proc.communicate()[1].decode('utf-8')
-    logger.info(result.split('\n')[-2])
+        video_filename=os.path.join(videos_dir, filename+'.mp4')
 
-    logger.success(f"{filename}.mp4 downloaded and converted")
-    # shutil.rmtree(os.path.join(temp_dir, filename))
-    # logger.info('temp files deleted')
+        if path_exists(video_filename):
+            logger.warning(f"{filename}.mp4 already exists")
+            return
+        # pathlib.Path(video_filename).unlink(missing_ok=True)
+
+
+        # links = self.extract_links()[:50]
+        links = self.extract_links()
+
+        task_id = progress.add_task(f"Downloading {filename}", total=len(links))
+        if len(progress.tasks)>progressbar_count:
+            progress.remove_task(progress.task_ids[0])
+
+        create_dir(os.path.join(temp_dir,filename))
+
+        with futures.ThreadPoolExecutor(max_workers=20) as executor:
+            result=executor.map(self.download_file, links, self.extract_chunk_paths(links))
+            for _ in result:
+                pass
+                progress.advance(task_id,1)
+
+        with open(os.path.join(temp_dir, filename, "list.txt"), 'w') as f:
+            f.write('\n'.join(list_filenames(os.path.join(temp_dir, filename))))
+
+        try:
+            # proc=subprocess.Popen(['ffmpeg', '-f','concat','-i',os.path.join(temp_dir, filename, "list.txt"),'-c','copy',
+            #                 video_filename],stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+            proc=subprocess.Popen(['ffmpeg', '-f','concat','-safe','0','-i',os.path.join(temp_dir, filename, "list.txt"),'-c:v','copy','-c:a','copy',
+                                   '-movflags','+faststart',video_filename],stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+
+        except subprocess.SubprocessError:
+            logger.error('Conversion failed')
+            sys.exit(1)
+
+        logger.info('Conversion started')
+        proc.stdin.write("y".encode('utf-8'))
+        proc.wait()
+        result=proc.communicate()[1].decode('utf-8')
+        logger.info(result.split('\n')[-2])
+
+        logger.success(f"{filename}.mp4 downloaded and converted")
+        shutil.rmtree(os.path.join(temp_dir, filename))
+        logger.info('temp files deleted')
 
 
 log_string=LogString()
@@ -202,7 +209,7 @@ logger.add(log_string, level=9, format=log_format)
 logger.add("log.txt", level=1, format=log_format)
 
 active_downloads = dict()
-active_lock = th.Lock()
+active_downloads_lock = th.Lock()
 
 
 console = Console()
@@ -236,27 +243,39 @@ th.Thread(target=updater,daemon=True).start()
 
 try:
 
-    links_files = os.listdir(links_dir)
+    links_filenames = list_links_filenames()
 
 
     with Live(layout, refresh_per_second=4, console=console):
 
-        if not links_files:
+        if not links_filenames:
             logger.error("No M3U/EXTM3U files found in the links directory.")
             updater(once=True)
             sys.exit(0)
 
+        while links_filenames:
 
-        for filename in links_files:
+            links_filename=links_filenames.pop(0)
 
             terminal_size = console.size
 
             log_string.set_size(math.floor(terminal_size.height/3*2)-3)
             progressbar_count=int(terminal_size.height/3)-3
 
-            download_video(filename)
+            downloader=VideoDownloader(links_filename)
+            downloader.download_video()
+
+            shutil.move(os.path.join(links_dir,links_filename),
+                        os.path.join(links_dir,links_filename+"-"+downloaded_mark))
+
+            new_links_filenames = list_links_filenames()
+
+            diff = set(new_links_filenames) - set(links_filenames)
+            if diff:
+                logger.success(f"files {' '.join(diff)} added to download")
+            links_filenames = new_links_filenames
+
 
 except KeyboardInterrupt:
-    # layout.children[0].children[1].renderable.renderable="EXITING..."
     logger.info("Exiting...")
     # updater(once=True)
