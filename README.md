@@ -13,11 +13,30 @@
 
 4. Get your videos from the `videos` directory
 
-## 2. Current issues and notes
+
+## 2. Automatically gather playlist files
+
+1. Set up your browser proxy settings to `127.0.0.1:8080`\
+(you can change that in the `proxy.sh` file)
+
+
+2. Start the `proxy.sh` script in the terminal
+
+
+3. Browse the pages, and start playing the video on each.\
+the files will appear directly in the `links` directory
+
+
+4. If not, check for the match URLs in `proxy_interceptor.py`
+
+
+## 3. Current issues and notes
 
 1. Since video is downloaded by chunks, each chunk may cause data loss.\
 As a result we have randomly appeared distortions. It appears on +- 20% of chunk's junctions
 
 
-3. We still have to download the M3U files by hands from the browser console\
-Improvements are encouraged
+2. ~~We still have to download the M3U files by hands from the browser console\
+Improvements are encouraged~~\
+partially works, but improvements about recognition of lesson name are required
+

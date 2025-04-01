@@ -108,6 +108,7 @@ def updater(once=False):
 class VideoDownloader():
 
     filename=""
+    task_id=0
 
     def __init__(self,filename):
         self.filename = filename
@@ -117,33 +118,37 @@ class VideoDownloader():
             links=list(filter(lambda x: x.startswith('http'), f.readlines()))
         return links
 
-
     def download_file(self, link, chunk_filename):
         status_code=0
 
         if path_exists(chunk_filename):
             logger.trace(f"{chunk_filename} already exists")
+            progress.advance(self.task_id, 1)
             return
 
-        with active_downloads_lock:
-            active_downloads.update({chunk_filename:time.time()})
-
         try:
+
+            with active_downloads_lock:
+                active_downloads.update({chunk_filename: time.time()})
+
             while status_code != 200:
-                resp = requests.get(link)
+                resp = requests.get(link,timeout=30)
                 status_code=resp.status_code
 
             with open(chunk_filename, 'wb') as f:
                 f.write(resp.content)
 
             logger.trace(f"{chunk_filename} downloaded")
+            progress.advance(self.task_id, 1)
 
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.RequestException:
+            logger.trace(f'error while downloading {chunk_filename}, retrying')
             self.download_file(link, chunk_filename)
+            return
 
-        finally:
-            with active_downloads_lock:
-                del active_downloads[chunk_filename]
+        with active_downloads_lock:
+            del active_downloads[chunk_filename]
+
 
 
     def extract_chunk_paths(self,links):
@@ -167,6 +172,7 @@ class VideoDownloader():
         links = self.extract_links()
 
         task_id = progress.add_task(f"Downloading {filename}", total=len(links))
+        self.task_id = task_id
         if len(progress.tasks)>progressbar_count:
             progress.remove_task(progress.task_ids[0])
 
@@ -176,7 +182,7 @@ class VideoDownloader():
             result=executor.map(self.download_file, links, self.extract_chunk_paths(links))
             for _ in result:
                 pass
-                progress.advance(task_id,1)
+                # progress.advance(task_id,1)
 
         with open(os.path.join(temp_dir, filename, "list.txt"), 'w') as f:
             f.write('\n'.join(list_filenames(os.path.join(temp_dir, filename))))
