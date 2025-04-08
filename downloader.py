@@ -1,4 +1,4 @@
-import os, sys, time, math
+import os, sys, time, math, json
 import requests
 import threading as th
 from concurrent import futures
@@ -14,12 +14,6 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn, Ti
 from rich.live import Live
 from rich.text import Text
 
-links_dir='links/'
-temp_dir='temp/'
-videos_dir='videos/'
-downloaded_mark="downloaded"
-
-
 # filename='480_12_1'
 # log_format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {message}'
 log_format = '[green]{time:HH:mm:ss}[/green] | [level]{level: <8}[/level] |.................... {message}'
@@ -34,6 +28,10 @@ def create_dir(path):
     except:
         logger.error(f"Error creating directory {path}")
         sys.exit(1)
+
+
+def path_exists(path):
+    return pathlib.Path(path).exists()
 
 
 def list_filenames(path):
@@ -52,13 +50,8 @@ def get_active_downloads_panel():
     return Panel(content, title="Active Downloads", border_style="green")
 
 
-def path_exists(path):
-    return pathlib.Path(path).exists()
-
-
 
 def make_layout() -> Layout:
-    """Create a layout with two columns: progress on the left, active downloads on the right."""
     layout = Layout()
     layout.split_row(
         Layout(ratio=2),
@@ -114,7 +107,7 @@ class VideoDownloader():
         self.filename = filename
 
     def extract_links(self):
-        with open(os.path.join(links_dir+self.filename)) as f:
+        with open(os.path.join(links_dir,self.filename)) as f:
             links=list(filter(lambda x: x.startswith('http'), f.readlines()))
         return links
 
@@ -206,6 +199,15 @@ class VideoDownloader():
         logger.success(f"{filename}.mp4 downloaded and converted")
         shutil.rmtree(os.path.join(temp_dir, filename))
         logger.info('temp files deleted')
+
+
+with open("config.json") as f:
+    config = json.load(f)
+
+links_dir = config['links_dir']
+temp_dir = config['temp_dir']
+videos_dir = config['videos_dir']
+downloaded_mark = config['downloader']['downloaded_mark']
 
 
 log_string=LogString()

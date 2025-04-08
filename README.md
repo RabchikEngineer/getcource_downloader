@@ -27,7 +27,7 @@
 the files will appear directly in the `links` directory
 
 
-4. If not, check for the match URLs in `proxy_interceptor.py`
+4. If not, check for the match URLs in `config.json`
 
 
 ## 3. Current issues and notes
@@ -36,7 +36,6 @@ the files will appear directly in the `links` directory
 As a result we have randomly appeared distortions. It appears on +- 20% of chunk's junctions
 
 
-2. ~~We still have to download the M3U files by hands from the browser console\
-Improvements are encouraged~~\
+2. ~~We still have to download the M3U files by hands from the browser console~~\
 partially works, but improvements about recognition of lesson name are required
 

@@ -1,0 +1,15 @@
+{
+  "links_dir": "links",
+  "temp_dir": "temp",
+  "videos_dir": "videos",
+  "html_dir":"html",
+  "downloader": {
+    "downloaded_mark": "downloaded"
+  },
+  "proxy": {
+    "html_match": "teach/control/lesson/",
+    "playlist_match": "api/playlist/media",
+    "save_html" : true,
+    "name_trimming": 20
+  }
+}
