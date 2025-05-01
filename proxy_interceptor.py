@@ -20,18 +20,19 @@ class Page:
         self.videos = {}
 
     def add_video(self, file):
-        pos = file.find(b"https")
-        vid_id = str(file[pos:pos + 200]).split('/')[6]
+        split_url=str(file[file.find(b"https"):file.find(b"?")]).split('/')
+        vid_id = "-".join(split_url[5:7])
+        resolution=split_url[-2]
         if not vid_id in self.videos.keys():
-            self.videos.update({vid_id: (len(self.videos), file)})
+            self.videos.update({vid_id: (len(self.videos), file, resolution)})
 
     def save_to_files(self):
 
         create_dir(os.path.join(config["output_dir"], self.title))
         print(len(self.videos))
-        for i, file in self.videos.values():
-            file_path = os.path.join(config["output_dir"], self.title, f"{i + 1}.m3u")
-            if not path_exists(file_path):
+        for i, file, resolution in self.videos.values():
+            file_path = os.path.join(config["output_dir"], self.title, f"{i + 1}_{resolution}.m3u")
+            if not path_exists(file_path) or config["proxy"]["overwrite_links_files"]:
                 with open(file_path, "wb") as f:
                     f.write(file)
                 print(f"Saved file to: {file_path}")

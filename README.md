@@ -49,3 +49,7 @@ As a result we have randomly appeared distortions. It appears on +- 20% of chunk
 
 
 2. The match URLs seems not to be universal, improvements are accepted
+
+
+3. If the wrong resolution was saved, choose the appropriate one in player,\
+than reload the page and launch the video again. I don't have the solution for this yet.
