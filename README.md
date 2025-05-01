@@ -5,37 +5,47 @@
 `pip install -r requirements.txt`
 
 
-2. Put your files to the `links` directory (try firstly 3 or create if missing)
+2. Run `py downloader.py` or `./downloader.py`(doesn't work with venv)\
+to create necessary dirs 
 
 
-3. Run "py downloader.py"
+## 2. Manual downloading
+
+1. Put your playlist files to the `output` directory (create if missing)\
+or in some subdirectory
 
 
-4. Get your videos from the `videos` directory
+2. Run `downloader`
 
 
-## 2. Automatically gather playlist files
+3. Your videos will be placed along with playlist files
+
+
+## 3. Automatically gather playlist files, videos, and html
 
 1. Set up your browser proxy settings to `127.0.0.1:8080`\
 (you can change that in the `proxy.sh` file)
 
 
-2. Start the `proxy.sh` script in the terminal
+2. Run `./proxy.sh` in the terminal 
 
 
 3. Browse the pages, and start playing the video on each.\
-the files will appear directly in the `links` directory
+Data saved to `output` dir.\
+Script will create subdirs named the same as lesson title on page\
+You can toggle html downloading in the `config.json`
 
 
 4. If not, check for the match URLs in `config.json`
 
 
-## 3. Current issues and notes
+5. Run `downloader` to download videos. It will find links automatically 
+
+
+## 4. Current issues and notes
 
 1. Since video is downloaded by chunks, each chunk may cause data loss.\
 As a result we have randomly appeared distortions. It appears on +- 20% of chunk's junctions
 
 
-2. ~~We still have to download the M3U files by hands from the browser console~~\
-partially works, but improvements about recognition of lesson name are required
-
+2. The match URLs seems not to be universal, improvements are accepted

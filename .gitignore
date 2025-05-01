@@ -2,9 +2,9 @@
 
 temp
 videos
-links
-html
+output
 log.txt
+todo.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

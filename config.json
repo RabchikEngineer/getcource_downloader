@@ -1,10 +1,8 @@
 {
-  "links_dir": "links",
   "temp_dir": "temp",
-  "videos_dir": "videos",
-  "html_dir":"html",
+  "output_dir": "output",
   "downloader": {
-    "downloaded_mark": "downloaded"
+    "downloaded_mark": "-downloaded"
   },
   "proxy": {
     "html_match": "teach/control/lesson/",
