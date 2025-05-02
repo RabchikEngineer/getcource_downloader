@@ -33,7 +33,7 @@ class Page:
 
     def save_to_files(self):
         create_dir(os.path.join(config.output_dir, self.title))
-        print(len(self.videos))
+
         for i, resolutions in self.videos.values():
             for file, resolution in resolutions:
                 file_path = os.path.join(config.output_dir, self.title, f"{i + 1}_{resolution}.m3u")
@@ -61,6 +61,8 @@ def response(flow: http.HTTPFlow):
             lesson_title = title_element.text.strip().split(".")[0][:config.proxy.name_trimming]
             print(f"Detected lesson title: {lesson_title}")
             current_page = Page(lesson_title, flow.response.text)
+            if config.proxy.save_html and config.proxy.save_pure_html:
+                current_page.save_to_files()
 
     # add the videos
     if config.proxy.playlist_match in flow.request.url:

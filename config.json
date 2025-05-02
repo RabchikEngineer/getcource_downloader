@@ -8,7 +8,8 @@
     "html_match": "teach/control/lesson/",
     "playlist_match": "api/playlist/media",
     "save_html" : true,
-    "name_trimming": 20,
-    "overwrite_links_files": true
+    "name_trimming": 50,
+    "overwrite_links_files": true,
+    "save_pure_html": false
   }
 }
