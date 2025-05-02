@@ -30,16 +30,20 @@ or in some subdirectory
 2. Run `./proxy.sh` in the terminal 
 
 
-3. Browse the pages, and start playing the video on each.\
+3. Browse the pages, and start playing the video on each. Notes:\
 Data saved to `output` dir.\
-Script will create subdirs named the same as lesson title on page\
-You can toggle html downloading in the `config.json`
+Script will create **subdirs** named the same as lesson title on page\
+You can toggle html downloading in the `config.json`\
+It will save **separate file** for each **resolution** of video you played.\
+If you doesn't want some of them, you need to **manually** remove files,\
+otherwise they will be downloaded.
 
 
 4. If not, check for the match URLs in `config.json`
 
 
-5. Run `downloader` to download videos. It will find links automatically 
+5. Run `downloader` to download videos. It will find links automatically\
+Note that video resolution is highly determines it size, up to 2x between 480 and 720
 
 
 ## 4. Current issues and notes
@@ -49,7 +53,3 @@ As a result we have randomly appeared distortions. It appears on +- 20% of chunk
 
 
 2. The match URLs seems not to be universal, improvements are accepted
-
-
-3. If the wrong resolution was saved, choose the appropriate one in player,\
-than reload the page and launch the video again. I don't have the solution for this yet.

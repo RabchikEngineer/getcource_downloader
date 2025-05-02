@@ -9,6 +9,7 @@ import pathlib
 import shutil
 import glob
 import tempfile
+from addict import Dict
 
 from rich.console import Console
 from rich.layout import Layout
@@ -202,11 +203,11 @@ class VideoDownloader:
 
 
 with open("config.json") as f:
-    config = json.load(f)
+    config = Dict(json.load(f))
 
-output_dir: str = config['output_dir']
-temp_dir: str = config['temp_dir']
-downloaded_mark = config['downloader']['downloaded_mark']
+output_dir: str = config.output_dir
+temp_dir: str = config.temp_dir
+downloaded_mark = config.downloader.downloaded_mark
 
 log_string = LogString()
 
